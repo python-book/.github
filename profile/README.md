@@ -1,6 +1,6 @@
 ## Congratulations on your choice of learning Python 👋
 
-[A test link](../README.md)
+[You can use your Browser as your Python learning env.](../index.html)
 
 <!--
 

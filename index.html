@@ -1,0 +1,274 @@
+<html> 
+<head> 
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js" type="text/javascript"></script> 
+<script src="js/skulpt.min.js" type="text/javascript"></script> 
+<script src="js/skulpt-stdlib.js" type="text/javascript"></script> 
+<style>
+    .toolbar {
+        background-color: #f0f0f0;
+        padding: 10px;
+        display: flex;
+        align-items: center;
+    }
+    .toolbar button {
+        margin-right: 10px;
+    }
+    #loadbutton {
+        background-color: rgb(153, 153, 194);
+        padding: 5px 10px;
+        border: none;
+        cursor: pointer;
+    }
+    #loadbutton:before {
+        content: '\1F4C2';
+        display: inline-block;
+        margin-right: 5px;
+    }
+    #savebutton {
+        background-color: blue;
+        color: white;
+        padding: 5px 10px;
+        border: none;
+        cursor: pointer;
+    }
+    #savebutton:before {
+        content: '\1F4BE'; /* Floppy disk icon */
+        display: inline-block;
+        margin-right: 5px;
+    }
+    .container {
+        display: flex;
+        width: 75%;
+    }
+    #linenumbers {
+        text-align: right;
+        padding-right: 10px;
+        margin-top: 0;
+        background-color: #f0f0f0;
+        color: #333;
+        overflow: hidden;
+        user-select: none;
+    }
+    #pycode {
+        width: 100%;
+        height: 200px;
+        margin: 0;
+        border: none;
+        resize: none;
+        outline: none;
+        font-family: monospace;
+    }
+    #runbutton {
+        background-color: green;
+        color: white;
+        padding: 5px 10px;
+        border: none;
+        cursor: pointer;
+    }
+    #runbutton:before {
+        content: '\25B6'; /* Right-facing triangle */
+        display: inline-block;
+        margin-right: 5px;
+    }
+    .output-canvas-caption {
+        font-weight: lighter;
+        margin-bottom: 5px;
+    }
+    .resize-bar {
+        background-color: #666;
+        background-image: linear-gradient(transparent 50%, transparent); 
+        cursor: ew-resize;
+        width: 1px;
+        top: 20px;
+        height: 100%;
+    }
+    .resize-bar::before {
+        content: '';
+        background-color: #666;
+        background-image: linear-gradient(transparent 50%, transparent); 
+        cursor: ew-resize;
+        width: 2px;
+        top: 20px;
+        height: 100%;
+    }
+
+    .output-canvas-container {
+        display: flex;
+        background-color: #f0f0f0;
+        padding: 10px;
+        margin-top: 10px;
+    }
+
+    .output-container, #mycanvas {
+        flex-grow: 1; /* Allow flexible resizing */
+    }
+
+    #output {
+        width: 95%; /* Ensure textarea takes full width of its container */
+        height: 90%; /* Full height */
+        resize: none; /* Disable built-in resize handle */
+    }
+
+    /* Ensure full height for containers */
+    .output-container, #mycanvas, .output-canvas-container {
+        height: 200px; /* Adjust height as needed */
+    }
+</style>
+</head> 
+
+<body> 
+
+<script type="text/javascript"> 
+    // JavaScript to handle resize bar movement
+    window.onload = function() {
+
+        updateLineNumbers();
+        var isResizing = false;
+        var lastDownX = 0;
+        var container = document.querySelector('.output-canvas-container');
+        var leftSide = document.querySelector('.output-container');
+        var rightSide = document.getElementById('mycanvas');
+        var handle = document.querySelector('.resize-bar');
+
+        handle.onmousedown = function(e) {
+            isResizing = true;
+            lastDownX = e.clientX;
+        };
+
+        document.onmousemove = function(e) {
+            // Only execute if isResizing is true
+            if (!isResizing) {
+                return;
+            }
+
+            var offsetRight = container.clientWidth - (e.clientX - container.offsetLeft);
+
+            leftSide.style.flexGrow = '';
+            rightSide.style.flexGrow = '';
+
+            leftSide.style.width = (e.clientX - container.offsetLeft) + 'px';
+            rightSide.style.width = offsetRight + 'px';
+        };
+
+        document.onmouseup = function(e) {
+            // Stop resizing
+            isResizing = false;
+        };
+    };
+function loadFile() {
+    var fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.py';
+    fileInput.onchange = e => { 
+       var file = e.target.files[0]; 
+       var reader = new FileReader();
+       reader.readAsText(file,'UTF-8');
+       reader.onload = readerEvent => {
+           var content = readerEvent.target.result;
+           document.getElementById('pycode').value = content;
+           updateLineNumbers();
+       }
+    }
+    fileInput.click();
+}
+function saveFile() {
+    var text = document.getElementById('pycode').value;
+    var filename = prompt("Save as", "Untitled.py");
+    if (filename) {
+        var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+        var url = window.URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }
+}
+// Function to update line numbers
+function updateLineNumbers() {
+    var code = document.getElementById('pycode');
+    var lines = code.value.split('\n').length;
+    var linenumbers = document.getElementById('linenumbers');
+    var lineNumbersContent = '';
+    for (var i = 1; i <= lines; i++) {
+        lineNumbersContent += i + '\n';
+    }
+    linenumbers.textContent = lineNumbersContent;
+}
+
+// output functions are configurable.  This one just appends some text
+// to a pre element.
+function outf(text) { 
+    var mypre = document.getElementById("output"); 
+    var textNode = document.createTextNode(text);
+    mypre.appendChild(textNode);
+} 
+function builtinRead(x) {
+    if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
+            throw "File not found: '" + x + "'";
+    return Sk.builtinFiles["files"][x];
+}
+
+// Here's everything you need to run a python program in skulpt
+// grab the code from your textarea
+// get a reference to your pre element for output
+// configure the output function
+// call Sk.importMainWithBody()
+function runit() { 
+   var prog = document.getElementById("pycode").value; 
+   var mypre = document.getElementById("output"); 
+   mypre.innerHTML = ''; 
+   Sk.pre = "output";
+   Sk.configure({output:outf, read:builtinRead}); 
+   (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = 'mycanvas';
+   var myPromise = Sk.misceval.asyncToPromise(function() {
+       return Sk.importMainWithBody("<stdin>", false, prog, true);
+   });
+   myPromise.then(function(mod) {
+       console.log('success');
+   },
+       function(err) {
+       mypre.innerHTML += err.toString();
+   });
+} 
+</script> 
+
+<h3>Python On (the) Net</h3> 
+<div class="toolbar">
+    <button type="button" id="runbutton" onclick="runit()" title="Run"></button>
+    <button type="button" id="loadbutton" onclick="loadFile()" title="Open...">Open...</button>
+    <button type="button" id="savebutton" onclick="saveFile()" title="Save As">Save As...</button>
+
+</div>
+<form>
+    <div class="container">
+        <pre id="linenumbers">1</pre>
+        <textarea id="pycode" cols="80" rows="10" oninput="updateLineNumbers()" onscroll="document.getElementById('linenumbers').scrollTop = this.scrollTop;">
+import turtle
+
+t = turtle.Turtle()
+t.forward(100)
+
+print ("Hello World")
+        </textarea><br />
+    </div>
+</form>
+<div class="output-canvas-container">
+    <div class="output-container">
+        <div class="output-canvas-caption"> Output:</div>
+            <textarea id="output" readonly="true"></textarea>
+        </div>
+        <div class="resize-bar"></div>
+    
+        <div class="output-canvas-caption"> Graph:</div>
+        <div id="mycanvas" ></div>
+    </div>
+
+</div>
+
+</body> 
+
+</html> 
