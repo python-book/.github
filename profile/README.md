@@ -1,5 +1,7 @@
 ## Congratulations on your choice of learning Python 👋
 
+[A test link](../README.md)
+
 <!--
 
 **Here are some ideas to get you started:**
