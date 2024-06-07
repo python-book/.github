@@ -1,6 +1,6 @@
 ## Congratulations on your choice of learning Python 👋
 
-[You can use your Browser as your Python learning env.](../index.html)
+[You can use your Browser as your Python learning env.](https://python-book.github.io)
 
 <!--
 
